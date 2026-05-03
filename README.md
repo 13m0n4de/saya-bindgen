@@ -63,5 +63,5 @@ git clone https://github.com/13m0n4de/saya-bindgen
 Build and run with [Just](https://github.com/casey/just):
 
 ```
-just run
+just run < raylib.h
 ```
