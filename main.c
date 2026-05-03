@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
   init_macros();
   add_default_include_paths(argv[0]);
 
-  Token *tok = tokenize_file("raylib.h");
+  Token *tok = tokenize_file("-"); // stdin
   tok = preprocess(tok);
 
   Obj *prog = parse(tok);
