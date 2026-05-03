@@ -63,5 +63,5 @@ git clone https://github.com/13m0n4de/saya-bindgen
 使用 [Just](https://github.com/casey/just) 编译并运行：
 
 ```
-just run < raylib.h
+just run < raylib.h > raylib.saya
 ```
