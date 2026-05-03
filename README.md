@@ -7,6 +7,14 @@ Generates [Saya](https://github.com/13m0n4de/saya) FFI bindings from C headers.
 For example, given this C code:
 
 ```c
+typedef enum {
+    CAMERA_CUSTOM = 0,
+    CAMERA_FREE,
+    CAMERA_ORBITAL,
+    CAMERA_FIRST_PERSON,
+    CAMERA_THIRD_PERSON
+} CameraMode;
+
 typedef struct Image {
     void *data;
     int width;
@@ -21,6 +29,13 @@ void SetWindowIcons(Image *images, int count);
 saya-bindgen produces:
 
 ```saya
+pub type CameraMode = i32;
+pub const CameraMode_CAMERA_CUSTOM: CameraMode = 0i32;
+pub const CameraMode_CAMERA_FREE: CameraMode = 1i32;
+pub const CameraMode_CAMERA_ORBITAL: CameraMode = 2i32;
+pub const CameraMode_CAMERA_FIRST_PERSON: CameraMode = 3i32;
+pub const CameraMode_CAMERA_THIRD_PERSON: CameraMode = 4i32;
+
 pub struct Image {
     data: *opaque,
     width: i32,
