@@ -24,8 +24,7 @@ int align_to(int n, int align) { return (n + align - 1) / align * align; }
 static void add_default_include_paths(char *argv0) {
   // We expect that chibicc-specific include files are installed
   // to ./include relative to argv[0].
-  strarray_push(&include_paths,
-                format("%s/../chibicc/include", dirname(strdup(argv0))));
+  strarray_push(&include_paths, format("%s/include", dirname(strdup(argv0))));
 
   // Add standard include paths.
   strarray_push(&include_paths, "/usr/local/include");

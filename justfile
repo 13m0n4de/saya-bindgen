@@ -19,6 +19,7 @@ build: libchibicc
     mkdir -p build/
     {{cc}} {{my_cflags}} -I{{chibicc_dir}} -c -o build/main.o main.c
     {{cc}} -o build/bindgen build/main.o build/libchibicc.a
+    cp -r {{chibicc_dir}}/include build/include
 
 run: build
     ./build/bindgen
