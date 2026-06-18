@@ -23,6 +23,15 @@ static char *sanitize_ident(char *name) {
   return name;
 }
 
+typedef struct {
+  char *key;
+  int val;
+} EnumConst;
+
+int cmp_enum_const(const void *a, const void *b) {
+  return ((EnumConst *)a)->val - ((EnumConst *)b)->val;
+}
+
 // Returns true if a given file exists.
 bool file_exists(char *path) {
   struct stat st;
@@ -187,6 +196,9 @@ static void emit_typedef() {
         break;
       }
       printf("pub type %s = %s;\n", sanitize_ident(name), base);
+
+      EnumConst consts[scope->vars.capacity];
+      int nconsts = 0;
       for (int j = 0; j < scope->vars.capacity; j++) {
         HashEntry *const_entry = &scope->vars.buckets[j];
         if (!const_entry->key) {
@@ -196,9 +208,16 @@ static void emit_typedef() {
         if (!const_vs->enum_ty || const_vs->enum_ty != ty) {
           continue;
         }
+        consts[nconsts] = (EnumConst){const_entry->key, const_vs->enum_val};
+        nconsts += 1;
+      }
+
+      qsort(consts, nconsts, sizeof(EnumConst), cmp_enum_const);
+
+      for (int j = 0; j < nconsts; j++) {
         printf("pub const %s_%s: %s = %d;\n", sanitize_ident(name),
-               sanitize_ident(const_entry->key), sanitize_ident(name),
-               const_vs->enum_val);
+               sanitize_ident(consts[j].key), sanitize_ident(name),
+               consts[j].val);
       }
       break;
     }
@@ -247,7 +266,14 @@ static void emit_function(Obj *prog) {
       }
       param = param->next;
     }
-    printf(") -> %s;\n", type_to_saya(fn->ty->return_ty));
+    printf(")");
+
+    Type *return_ty = fn->ty->return_ty;
+    if (return_ty->kind != TY_VOID) {
+      printf(" -> %s", type_to_saya(return_ty));
+    }
+
+    printf(";\n");
   }
 }
 
