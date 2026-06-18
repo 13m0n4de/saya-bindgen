@@ -183,8 +183,8 @@ static void emit_typedef() {
         if (!const_vs->enum_ty || const_vs->enum_ty != ty) {
           continue;
         }
-        printf("pub const %s_%s: %s = %d%s;\n", name, const_entry->key, name,
-               const_vs->enum_val, base);
+        printf("pub const %s_%s: %s = %d;\n", name, const_entry->key, name,
+               const_vs->enum_val);
       }
       break;
     }
