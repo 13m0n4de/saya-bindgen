@@ -9,7 +9,19 @@ char *base_file = NULL;
 static StringArray std_include_paths;
 static HashMap type_names;
 
-char *type_to_saya(Type *ty);
+static const char *saya_keywords[] = {
+    "pub",      "use",   "as",     "fn",   "extern", "return", "struct",
+    "type",     "let",   "if",     "else", "while",  "loop",   "break",
+    "continue", "const", "static", "true", "false",  NULL,
+};
+
+static char *sanitize_ident(char *name) {
+  for (int i = 0; saya_keywords[i]; i++) {
+    if (strcmp(name, saya_keywords[i]) == 0)
+      return format("%s_", name);
+  }
+  return name;
+}
 
 // Returns true if a given file exists.
 bool file_exists(char *path) {
@@ -141,7 +153,7 @@ static void emit_typedef() {
 
     switch (ty->kind) {
     case TY_STRUCT:
-      printf("pub struct %s {\n", name);
+      printf("pub struct %s {\n", sanitize_ident(name));
       for (Member *member = ty->members; member; member = member->next) {
         if (!member->name) {
           fprintf(stderr,
@@ -149,8 +161,9 @@ static void emit_typedef() {
                   ty->name->filename, ty->name->line_no, name);
           continue;
         }
-        printf("    %.*s: %s,\n", member->name->len, member->name->loc,
-               type_to_saya(member->ty));
+        char *member_name = sanitize_ident(
+            format("%.*s", member->name->len, member->name->loc));
+        printf("    %s: %s,\n", member_name, type_to_saya(member->ty));
       }
       printf("}\n");
       break;
@@ -173,7 +186,7 @@ static void emit_typedef() {
         base = "i32";
         break;
       }
-      printf("pub type %s = %s;\n", name, base);
+      printf("pub type %s = %s;\n", sanitize_ident(name), base);
       for (int j = 0; j < scope->vars.capacity; j++) {
         HashEntry *const_entry = &scope->vars.buckets[j];
         if (!const_entry->key) {
@@ -183,7 +196,8 @@ static void emit_typedef() {
         if (!const_vs->enum_ty || const_vs->enum_ty != ty) {
           continue;
         }
-        printf("pub const %s_%s: %s = %d;\n", name, const_entry->key, name,
+        printf("pub const %s_%s: %s = %d;\n", sanitize_ident(name),
+               sanitize_ident(const_entry->key), sanitize_ident(name),
                const_vs->enum_val);
       }
       break;
@@ -196,9 +210,10 @@ static void emit_typedef() {
       // For pointer typedefs, expand via ty->base to avoid looking up ty itself
       // in type_names, which would produce "pub type Foo = Foo".
       if (ty->kind == TY_PTR) {
-        printf("pub type %s = *%s;\n", name, type_to_saya(ty->base));
+        printf("pub type %s = *%s;\n", sanitize_ident(name),
+               type_to_saya(ty->base));
       } else {
-        printf("pub type %s = %s;\n", name, type_to_saya(ty));
+        printf("pub type %s = %s;\n", sanitize_ident(name), type_to_saya(ty));
       }
       break;
     }
@@ -212,7 +227,8 @@ static void emit_function(Obj *prog) {
       continue;
     }
 
-    printf("@symbol(\"%s\") pub extern fn %s(", fn->name, fn->name);
+    printf("@symbol(\"%s\") pub extern fn %s(", fn->name,
+           sanitize_ident(fn->name));
     Type *param = fn->ty->params;
     while (param) {
       if (!param->name) {
@@ -222,8 +238,9 @@ static void emit_function(Obj *prog) {
             fn->ty->name->filename, fn->ty->name->line_no, fn->name);
         printf("_: %s", type_to_saya(param));
       } else {
-        printf("%.*s: %s", param->name->len, param->name->loc,
-               type_to_saya(param));
+        char *pname =
+            sanitize_ident(format("%.*s", param->name->len, param->name->loc));
+        printf("%s: %s", pname, type_to_saya(param));
       }
       if (param->next) {
         printf(", ");
