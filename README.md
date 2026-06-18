@@ -30,11 +30,11 @@ saya-bindgen produces:
 
 ```saya
 pub type CameraMode = i32;
-pub const CameraMode_CAMERA_CUSTOM: CameraMode = 0i32;
-pub const CameraMode_CAMERA_FREE: CameraMode = 1i32;
-pub const CameraMode_CAMERA_ORBITAL: CameraMode = 2i32;
-pub const CameraMode_CAMERA_FIRST_PERSON: CameraMode = 3i32;
-pub const CameraMode_CAMERA_THIRD_PERSON: CameraMode = 4i32;
+pub const CameraMode_CAMERA_CUSTOM: CameraMode = 0;
+pub const CameraMode_CAMERA_FREE: CameraMode = 1;
+pub const CameraMode_CAMERA_ORBITAL: CameraMode = 2;
+pub const CameraMode_CAMERA_FIRST_PERSON: CameraMode = 3;
+pub const CameraMode_CAMERA_THIRD_PERSON: CameraMode = 4;
 
 pub struct Image {
     data: *opaque,
@@ -44,7 +44,7 @@ pub struct Image {
     format: i32,
 }
 
-@symbol("SetWindowIcons") pub extern fn SetWindowIcons(images: *Image, count: i32) -> ();
+@symbol("SetWindowIcons") pub extern fn SetWindowIcons(images: *Image, count: i32);
 ```
 
 > [!NOTE]
