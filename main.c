@@ -132,7 +132,8 @@ char *type_to_saya(Type *ty) {
                                                : "union";
     fprintf(stderr,
             "%s:%d: warning: %s type has no name, using '(unknown)' as type\n",
-            ty->name->filename, ty->name->line_no, kind);
+            ty->name ? ty->name->filename : "(unknown)",
+            ty->name ? ty->name->line_no : 0, kind);
     return "(unknown)";
   }
   case TY_VLA:
