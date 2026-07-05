@@ -65,3 +65,10 @@ git clone https://github.com/13m0n4de/saya-bindgen
 ```
 just run < raylib.h > raylib.saya
 ```
+
+或者您希望用 C 语言实现（这样就不需要 Saya 编译器）：
+
+```
+just build-c
+just run-c < raylib.h > raylib.saya
+```

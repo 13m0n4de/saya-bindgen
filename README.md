@@ -65,3 +65,10 @@ Build and run with [Just](https://github.com/casey/just):
 ```
 just run < raylib.h > raylib.saya
 ```
+
+Or if you prefer a C implementation (no Saya compiler required):
+
+```
+just build-c
+just run-c < raylib.h > raylib.saya
+```
