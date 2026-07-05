@@ -1,0 +1,352 @@
+pub struct StringArray {
+    data: *[*i8],
+    capacity: i32,
+    len: i32,
+}
+
+
+pub type uint64_t = u64;
+
+@symbol("add_type") pub extern fn add_type(node: *Node);
+
+@symbol("align_to") pub extern fn align_to(n: i32, align: i32) -> i32;
+
+@symbol("array_of") pub extern fn array_of(base: *Type, size: i32) -> *Type;
+
+@symbol("codegen") pub extern fn codegen(prog: *Obj, out: *opaque);
+
+@symbol("const_expr") pub extern fn const_expr(rest: **Token, tok: *Token) -> i64;
+
+@symbol("consume") pub extern fn consume(rest: **Token, tok: *Token, str: *i8) -> bool;
+
+@symbol("convert_pp_tokens") pub extern fn convert_pp_tokens(tok: *Token);
+
+@symbol("copy_type") pub extern fn copy_type(ty: *Type) -> *Type;
+
+@symbol("decode_utf8") pub extern fn decode_utf8(new_pos: **i8, p: *i8) -> u32;
+
+@symbol("define_macro") pub extern fn define_macro(name: *i8, buf: *i8);
+
+@symbol("display_width") pub extern fn display_width(p: *i8, len: i32) -> i32;
+
+@symbol("encode_utf8") pub extern fn encode_utf8(buf: *i8, c: u32) -> i32;
+
+@symbol("enum_type") pub extern fn enum_type() -> *Type;
+
+@symbol("equal") pub extern fn equal(tok: *Token, op: *i8) -> bool;
+
+@symbol("error") pub extern fn error(fmt: *i8);
+
+@symbol("error_at") pub extern fn error_at(loc: *i8, fmt: *i8);
+
+@symbol("error_tok") pub extern fn error_tok(tok: *Token, fmt: *i8);
+
+@symbol("file_exists") pub extern fn file_exists(path: *i8) -> bool;
+
+@symbol("format") pub extern fn format(fmt: *i8, ...) -> *i8;
+
+@symbol("func_type") pub extern fn func_type(return_ty: *Type) -> *Type;
+
+@symbol("get_input_files") pub extern fn get_input_files() -> **File;
+
+@symbol("hashmap_delete") pub extern fn hashmap_delete(map: *HashMap, key: **Type);
+
+@symbol("hashmap_delete2") pub extern fn hashmap_delete2(map: *HashMap, key: **Type, keylen: i32);
+
+@symbol("hashmap_get") pub extern fn hashmap_get(map: *HashMap, key: **Type) -> *i8;
+
+@symbol("hashmap_get2") pub extern fn hashmap_get2(map: *HashMap, key: **Type, keylen: i32) -> *i8;
+
+@symbol("hashmap_put") pub extern fn hashmap_put(map: *HashMap, key: **Type, val: *i8);
+
+@symbol("hashmap_put2") pub extern fn hashmap_put2(map: *HashMap, key: **Type, keylen: i32, val: *i8);
+
+@symbol("hashmap_test") pub extern fn hashmap_test();
+
+@symbol("init_macros") pub extern fn init_macros();
+
+@symbol("is_compatible") pub extern fn is_compatible(t1: *Type, t2: *Type) -> bool;
+
+@symbol("is_flonum") pub extern fn is_flonum(ty: *Type) -> bool;
+
+@symbol("is_ident1") pub extern fn is_ident1(c: u32) -> bool;
+
+@symbol("is_ident2") pub extern fn is_ident2(c: u32) -> bool;
+
+@symbol("is_integer") pub extern fn is_integer(ty: *Type) -> bool;
+
+@symbol("is_numeric") pub extern fn is_numeric(ty: *Type) -> bool;
+
+@symbol("new_cast") pub extern fn new_cast(expr: *Node, ty: *Type) -> *Node;
+
+@symbol("new_file") pub extern fn new_file(name: *i8, file_no: i32, contents: *i8) -> *File;
+
+@symbol("parse") pub extern fn parse(tok: *Token) -> *Obj;
+
+@symbol("pointer_to") pub extern fn pointer_to(base: *Type) -> *Type;
+
+@symbol("preprocess") pub extern fn preprocess(tok: *Token) -> *Token;
+
+@symbol("search_include_paths") pub extern fn search_include_paths(filename: *i8) -> *i8;
+
+@symbol("skip") pub extern fn skip(tok: *Token, op: *i8) -> *Token;
+
+@symbol("strarray_push") pub extern fn strarray_push(arr: *StringArray, s: *i8);
+
+@symbol("struct_type") pub extern fn struct_type() -> *Type;
+
+@symbol("tokenize") pub extern fn tokenize(file: *File) -> *Token;
+
+@symbol("tokenize_file") pub extern fn tokenize_file(filename: *i8) -> *Token;
+
+@symbol("tokenize_string_literal") pub extern fn tokenize_string_literal(tok: *Token, basety: *Type) -> *Token;
+
+@symbol("undef_macro") pub extern fn undef_macro(name: *i8);
+
+@symbol("vla_of") pub extern fn vla_of(base: *Type, expr: *Node) -> *Type;
+
+@symbol("warn_tok") pub extern fn warn_tok(tok: *Token, fmt: *i8);
+
+pub struct File {
+    name: *i8,
+    file_no: i32,
+    contents: *i8,
+    display_name: *i8,
+    line_delta: i32,
+}
+
+pub struct HashEntry {
+    key: *i8,
+    keylen: i32,
+    val: *opaque,
+}
+
+pub struct HashMap {
+    buckets: *HashEntry,
+    capacity: i32,
+    used: i32,
+}
+
+pub struct Hideset {
+}
+
+pub struct Member {
+    next: *Member,
+    ty: *Type,
+    tok: *Token,
+    name: *Token,
+    idx: i32,
+    align: i32,
+    offset: i32,
+    is_bitfield: bool,
+    bit_offset: i32,
+    bit_width: i32,
+}
+
+pub struct Node {
+    kind: NodeKind,
+    next: *Node,
+    ty: *Type,
+    tok: *Token,
+    lhs: *Node,
+    rhs: *Node,
+    cond: *Node,
+    then: *Node,
+    els: *Node,
+    init: *Node,
+    inc: *Node,
+    brk_label: *i8,
+    cont_label: *i8,
+    body: *Node,
+    member: *Member,
+    func_ty: *Type,
+    args: *Node,
+    pass_by_stack: bool,
+    ret_buffer: *Obj,
+    label: *i8,
+    unique_label: *i8,
+    goto_next: *Node,
+    case_next: *Node,
+    default_case: *Node,
+    begin: i64,
+    end: i64,
+    asm_str: *i8,
+    cas_addr: *Node,
+    cas_old: *Node,
+    cas_new: *Node,
+    atomic_addr: *Obj,
+    atomic_expr: *Node,
+    var: *Obj,
+    val: i64,
+    fval: f64,
+}
+
+pub struct Obj {
+    next: *Obj,
+    name: *i8,
+    ty: *Type,
+    tok: *Token,
+    is_local: bool,
+    align: i32,
+    offset: i32,
+    is_function: bool,
+    is_definition: bool,
+    is_static: bool,
+    is_tentative: bool,
+    is_tls: bool,
+    init_data: *i8,
+    rel: *Relocation,
+    is_inline: bool,
+    params: *Obj,
+    body: *Node,
+    locals: *Obj,
+    va_area: *Obj,
+    alloca_bottom: *Obj,
+    stack_size: i32,
+    is_live: bool,
+    is_root: bool,
+    refs: StringArray,
+}
+
+pub struct Relocation {
+    next: *Relocation,
+    offset: i32,
+    label: **i8,
+    addend: i64,
+}
+
+pub struct Scope {
+    next: *Scope,
+    vars: HashMap,
+    tags: HashMap,
+}
+
+pub struct Token {
+    kind: TokenKind,
+    next: *Token,
+    val: i64,
+    // fval: f64,
+    _fval: [u8; 24], // padding(8 byte) + long double(16 byte)
+    loc: *i8,
+    len: i32,
+    ty: *Type,
+    str: *i8,
+    file: *File,
+    filename: *i8,
+    line_no: i32,
+    line_delta: i32,
+    at_bol: bool,
+    has_space: bool,
+    hideset: *Hideset,
+    origin: *Token,
+}
+
+pub struct Type {
+    kind: TypeKind,
+    size: i32,
+    align: i32,
+    is_unsigned: bool,
+    is_atomic: bool,
+    origin: *Type,
+    base: *Type,
+    name: *Token,
+    name_pos: *Token,
+    array_len: i32,
+    vla_len: *Node,
+    vla_size: *Obj,
+    members: *Member,
+    is_flexible: bool,
+    is_packed: bool,
+    return_ty: *Type,
+    params: *Type,
+    is_variadic: bool,
+    next: *Type,
+}
+
+pub struct VarScope {
+    var: *Obj,
+    type_def: *Type,
+    enum_ty: *Type,
+    enum_val: i32,
+}
+
+pub type NodeKind = i32;
+pub const NodeKind_ND_NULL_EXPR: NodeKind = 0;
+pub const NodeKind_ND_ADD: NodeKind = 1;
+pub const NodeKind_ND_SUB: NodeKind = 2;
+pub const NodeKind_ND_MUL: NodeKind = 3;
+pub const NodeKind_ND_DIV: NodeKind = 4;
+pub const NodeKind_ND_NEG: NodeKind = 5;
+pub const NodeKind_ND_MOD: NodeKind = 6;
+pub const NodeKind_ND_BITAND: NodeKind = 7;
+pub const NodeKind_ND_BITOR: NodeKind = 8;
+pub const NodeKind_ND_BITXOR: NodeKind = 9;
+pub const NodeKind_ND_SHL: NodeKind = 10;
+pub const NodeKind_ND_SHR: NodeKind = 11;
+pub const NodeKind_ND_EQ: NodeKind = 12;
+pub const NodeKind_ND_NE: NodeKind = 13;
+pub const NodeKind_ND_LT: NodeKind = 14;
+pub const NodeKind_ND_LE: NodeKind = 15;
+pub const NodeKind_ND_ASSIGN: NodeKind = 16;
+pub const NodeKind_ND_COND: NodeKind = 17;
+pub const NodeKind_ND_COMMA: NodeKind = 18;
+pub const NodeKind_ND_MEMBER: NodeKind = 19;
+pub const NodeKind_ND_ADDR: NodeKind = 20;
+pub const NodeKind_ND_DEREF: NodeKind = 21;
+pub const NodeKind_ND_NOT: NodeKind = 22;
+pub const NodeKind_ND_BITNOT: NodeKind = 23;
+pub const NodeKind_ND_LOGAND: NodeKind = 24;
+pub const NodeKind_ND_LOGOR: NodeKind = 25;
+pub const NodeKind_ND_RETURN: NodeKind = 26;
+pub const NodeKind_ND_IF: NodeKind = 27;
+pub const NodeKind_ND_FOR: NodeKind = 28;
+pub const NodeKind_ND_DO: NodeKind = 29;
+pub const NodeKind_ND_SWITCH: NodeKind = 30;
+pub const NodeKind_ND_CASE: NodeKind = 31;
+pub const NodeKind_ND_BLOCK: NodeKind = 32;
+pub const NodeKind_ND_GOTO: NodeKind = 33;
+pub const NodeKind_ND_GOTO_EXPR: NodeKind = 34;
+pub const NodeKind_ND_LABEL: NodeKind = 35;
+pub const NodeKind_ND_LABEL_VAL: NodeKind = 36;
+pub const NodeKind_ND_FUNCALL: NodeKind = 37;
+pub const NodeKind_ND_EXPR_STMT: NodeKind = 38;
+pub const NodeKind_ND_STMT_EXPR: NodeKind = 39;
+pub const NodeKind_ND_VAR: NodeKind = 40;
+pub const NodeKind_ND_VLA_PTR: NodeKind = 41;
+pub const NodeKind_ND_NUM: NodeKind = 42;
+pub const NodeKind_ND_CAST: NodeKind = 43;
+pub const NodeKind_ND_MEMZERO: NodeKind = 44;
+pub const NodeKind_ND_ASM: NodeKind = 45;
+pub const NodeKind_ND_CAS: NodeKind = 46;
+pub const NodeKind_ND_EXCH: NodeKind = 47;
+
+pub type TokenKind = i32;
+pub const TokenKind_TK_IDENT: TokenKind = 0;
+pub const TokenKind_TK_PUNCT: TokenKind = 1;
+pub const TokenKind_TK_KEYWORD: TokenKind = 2;
+pub const TokenKind_TK_STR: TokenKind = 3;
+pub const TokenKind_TK_NUM: TokenKind = 4;
+pub const TokenKind_TK_PP_NUM: TokenKind = 5;
+pub const TokenKind_TK_EOF: TokenKind = 6;
+
+pub type TypeKind = i32;
+pub const TypeKind_TY_VOID: TypeKind = 0;
+pub const TypeKind_TY_BOOL: TypeKind = 1;
+pub const TypeKind_TY_CHAR: TypeKind = 2;
+pub const TypeKind_TY_SHORT: TypeKind = 3;
+pub const TypeKind_TY_INT: TypeKind = 4;
+pub const TypeKind_TY_LONG: TypeKind = 5;
+pub const TypeKind_TY_FLOAT: TypeKind = 6;
+pub const TypeKind_TY_DOUBLE: TypeKind = 7;
+pub const TypeKind_TY_LDOUBLE: TypeKind = 8;
+pub const TypeKind_TY_ENUM: TypeKind = 9;
+pub const TypeKind_TY_PTR: TypeKind = 10;
+pub const TypeKind_TY_FUNC: TypeKind = 11;
+pub const TypeKind_TY_ARRAY: TypeKind = 12;
+pub const TypeKind_TY_VLA: TypeKind = 13;
+pub const TypeKind_TY_STRUCT: TypeKind = 14;
+pub const TypeKind_TY_UNION: TypeKind = 15;
+
+pub type clock_t = i64;
+
+pub type gid_t = u32;

@@ -1,0 +1,381 @@
+use chibicc;
+
+// libc
+struct StatBuf {
+    _data: [u8; 144],
+}
+
+extern fn dirname(path: *i8) -> *i8;
+extern fn strdup(s: *i8) -> *i8;
+extern fn stat(pathname: *i8, statbuf: *StatBuf) -> bool;
+
+type File = opaque;
+
+extern static stderr: *File;
+extern static stdout: *File;
+
+extern fn printf(fmt: *i8, ...) -> i32;
+extern fn fprintf(stream: *File, fmt: *i8, ...) -> i32;
+
+extern fn strcmp(s1: *i8, s2: *i8) -> i32;
+
+extern fn qsort(base: *[EnumConst; 1024], n: i64, size: i64, compar: fn(*EnumConst, *EnumConst) -> i32);
+
+// shim
+extern fn hashmap_bucket_at(map: *chibicc::HashMap, i: i32) -> *chibicc::HashEntry;
+extern fn hashentry_var_scope(entry: *chibicc::HashEntry) -> *chibicc::VarScope;
+extern fn chibicc_unreachable() -> !;
+
+// chibicc
+extern static scope: *chibicc::Scope;
+
+pub static include_paths: chibicc::StringArray = chibicc::StringArray {
+    data: null,
+    capacity: 0,
+    len: 0,
+};
+
+static std_include_paths: chibicc::StringArray = chibicc::StringArray {
+    data: null,
+    capacity: 0,
+    len: 0,
+};
+
+pub static base_file: *i8 = null;
+
+
+// for sort enum value
+struct EnumConst {
+    key: *i8,
+    val: i32,
+}
+
+fn cmp_enum_const(a: *EnumConst, b: *EnumConst) -> i32 {
+    a.val - b.val
+}
+
+
+// chibicc functions
+// Returns true if a given file exists.
+pub fn file_exists(path: *i8) -> bool {
+    let st = StatBuf { _data: [0; 144] };
+    !stat(path, &st)
+}
+
+// Round up `n` to the nearest multiple of `align`. For instance,
+// align_to(5, 8) returns 8 and align_to(11, 8) returns 16.
+pub fn align_to(n: i32, align: i32) -> i32 { (n + align - 1) / align * align }
+
+fn add_default_include_paths(argv0: *i8) {
+    // We expect that chibicc-specific include files are installed
+    // to ./include relative to argv[0].
+    chibicc::strarray_push(&include_paths, chibicc::format(c"%s/include", dirname(strdup(argv0))));
+
+    // Add standard include paths.
+    chibicc::strarray_push(&include_paths, c"/usr/local/include");
+    chibicc::strarray_push(&include_paths, c"/usr/include/x86_64-linux-gnu");
+    chibicc::strarray_push(&include_paths, c"/usr/include");
+
+    // Keep a copy of the standard include paths for -MMD option.
+    let i = 0;
+    while i as i32 < include_paths.len {
+        chibicc::strarray_push(&std_include_paths, include_paths.data[i]);
+        i = i + 1;
+    }
+}
+
+// bindgen
+static type_names: chibicc::HashMap = chibicc::HashMap {
+    buckets: null,
+    capacity: 0,
+    used: 0,
+};
+
+const SAYA_KEYWORDS_LEN: i64 = 19;
+static SAYA_KEYWORDS: [*i8; SAYA_KEYWORDS_LEN] = [
+    c"pub",      c"use",   c"as",     c"fn",   c"extern", c"return", c"struct",
+    c"type",     c"let",   c"if",     c"else", c"while",  c"loop",   c"break",
+    c"continue", c"const", c"static", c"true", c"false",
+];
+
+
+fn sanitize_ident(name: *i8) -> *i8 {
+    let i = 0;
+    while i < SAYA_KEYWORDS_LEN {
+        if strcmp(name, SAYA_KEYWORDS[i]) == 0i32 {
+            return chibicc::format(c"%s_", name);
+        }
+        i = i + 1;
+    }
+    return name;
+}
+
+fn build_type_names() {
+    let i = 0i32;
+    while i < scope.vars.capacity {
+        let entry = hashmap_bucket_at(&scope.vars, i);
+        if entry.key == null {
+            i = i + 1;
+            continue;
+        }
+        let var_scope = hashentry_var_scope(entry);
+        if var_scope.type_def == null {
+            i = i + 1;
+            continue;
+        }
+
+        chibicc::hashmap_put2(&type_names, &var_scope.type_def, 8, entry.key);
+
+        i = i + 1;
+    }
+}
+
+fn type_to_saya(ty: *chibicc::Type) -> *i8 {
+    if ty.kind == chibicc::TypeKind_TY_VOID {
+        c"()"
+    } else if ty.kind == chibicc::TypeKind_TY_BOOL {
+        c"bool"
+    } else if ty.kind == chibicc::TypeKind_TY_CHAR {
+        if ty.is_unsigned { c"u8" } else { c"i8" }
+    } else if ty.kind == chibicc::TypeKind_TY_SHORT {
+        if ty.is_unsigned { c"u16" } else { c"i16" }
+    } else if ty.kind == chibicc::TypeKind_TY_INT {
+        if ty.is_unsigned { c"u32" } else { c"i32" }
+    } else if ty.kind == chibicc::TypeKind_TY_LONG {
+        if ty.is_unsigned { c"u64" } else { c"i64" }
+    } else if ty.kind == chibicc::TypeKind_TY_FLOAT {
+        c"f32"
+    } else if ty.kind == chibicc::TypeKind_TY_DOUBLE
+           || ty.kind == chibicc::TypeKind_TY_LDOUBLE {
+        c"f64"
+    } else if ty.kind == chibicc::TypeKind_TY_PTR {
+        let name = chibicc::hashmap_get2(&type_names, &ty, 8);
+        if name == null && ty.origin != null {
+            name = chibicc::hashmap_get2(&type_names, &ty.origin, 8);
+        }
+        if name != null {
+            return name;
+        }
+        if ty.base.kind == chibicc::TypeKind_TY_VOID {
+            return c"*opaque";
+        }
+        chibicc::format(c"*%s", type_to_saya(ty.base))
+    } else if ty.kind == chibicc::TypeKind_TY_ARRAY {
+        chibicc::format(c"[%s; %d]", type_to_saya(ty.base), ty.array_len)
+    } else if ty.kind == chibicc::TypeKind_TY_FUNC {
+        let params = c"";
+        let p = ty.params;
+        while p != null {
+            if p == ty.params {
+                params = type_to_saya(p);
+            } else {
+                params = chibicc::format(c"%s, %s", params, type_to_saya(p));
+            }
+            p = p.next;
+        }
+        chibicc::format(c"fn(%s) -> %s", params, type_to_saya(ty.return_ty))
+    } else if ty.kind == chibicc::TypeKind_TY_ENUM
+           || ty.kind == chibicc::TypeKind_TY_STRUCT
+           || ty.kind == chibicc::TypeKind_TY_UNION {
+        let name = chibicc::hashmap_get2(&type_names, &ty, 8);
+        if name == null && ty.origin != null {
+            name = chibicc::hashmap_get2(&type_names, &ty.origin, 8);
+        }
+        if name != null {
+            return name;
+        }
+        let kind = if ty.kind == chibicc::TypeKind_TY_ENUM {
+            c"enum"
+        } else if ty.kind == chibicc::TypeKind_TY_STRUCT {
+            c"struct"
+        } else {
+            c"union"
+        };
+        fprintf(
+            stderr,
+            c"%s:%d: warning: %s type has no name, using '(unknown)' as type\n",
+            if ty.name != null { ty.name.filename } else { c"(unknown)" },
+            if ty.name != null { ty.name.line_no } else { 0i32 },
+            kind
+        );
+        c"(unknown)"
+    } else if ty.kind == chibicc::TypeKind_TY_VLA {
+        fprintf(
+            stderr,
+            c"%s:%d: warning: VLA type is not supported, using '(unknown)' as type\n",
+            ty.name.filename,
+            ty.name.line_no
+        );
+        c"(unknown)"
+    } else {
+        chibicc_unreachable();
+    }
+}
+
+fn emit_typedef() {
+    let i = 0i32;
+    while i < scope.vars.capacity {
+        let entry = hashmap_bucket_at(&scope.vars, i);
+        if entry.key == null {
+            i = i + 1;
+            continue;
+        }
+        let var_scope = hashentry_var_scope(entry);
+        if var_scope.type_def == null {
+            i = i + 1;
+            continue;
+        }
+
+        let name = entry.key;
+        let ty = var_scope.type_def;
+
+        if ty.kind == chibicc::TypeKind_TY_STRUCT {
+            printf(c"pub struct %s {\n", sanitize_ident(name));
+            let member = ty.members;
+            while member != null {
+                if member.name == null {
+                    fprintf(
+                        stderr,
+                        c"%s:%d: warning: anonymous member in struct %s, skiping\n",
+                        ty.name.filename,
+                        ty.name.line_no,
+                        name
+                    );
+                    member = member.next;
+                    continue;
+                }
+                let member_name = sanitize_ident(chibicc::format(c"%.*s", member.name.len, member.name.loc));
+                printf(c"    %s: %s,\n", member_name, type_to_saya(member.ty));
+                member = member.next;
+            }
+            printf(c"}\n");
+        } else if ty.kind == chibicc::TypeKind_TY_ENUM {
+            let base = if ty.size == 1i32 {
+                if ty.is_unsigned { c"u8" } else { c"i8" }
+            } else if ty.size == 2i32 {
+                if ty.is_unsigned { c"u16" } else { c"i16" }
+            } else if ty.size == 4i32 {
+                if ty.is_unsigned { c"u32" } else { c"i32" }
+            } else if ty.size == 8i32 {
+                if ty.is_unsigned { c"u64" } else { c"i64" }
+            } else {
+                c"i32"
+            };
+            printf(c"pub type %s = %s;\n", sanitize_ident(name), base);
+
+            // TODO: EnumConst consts[scope.vars.capacity];
+            let consts = [EnumConst { key: null, val: 0 }; 1024];
+            let nconsts = 0;
+
+            let j = 0i32;
+            while j < scope.vars.capacity {
+                let const_entry = hashmap_bucket_at(&scope.vars, j);
+                if const_entry.key == null {
+                    j = j + 1;
+                    continue;
+                }
+                let const_vs = hashentry_var_scope(const_entry);
+                if const_vs.enum_ty == null || const_vs.enum_ty != ty {
+                    j = j + 1;
+                    continue;
+                }
+                consts[nconsts] = EnumConst { key: const_entry.key, val: const_vs.enum_val };
+                nconsts = nconsts + 1;
+                j = j + 1;
+            }
+
+            qsort(&consts, nconsts, 16, cmp_enum_const);
+
+            let k = 0;
+            while k < nconsts {
+                printf(
+                    c"pub const %s_%s: %s = %d;\n",
+                    sanitize_ident(name),
+                    sanitize_ident(consts[k].key),
+                    sanitize_ident(name),
+                    consts[k].val
+                );
+                k = k + 1;
+            }
+        } else if ty.kind == chibicc::TypeKind_TY_UNION {
+            fprintf(
+                stderr,
+                c"%s:%d: warning: union %s is not supported, skipping\n",
+                ty.name.filename,
+                ty.name.line_no,
+                name
+            );
+        } else {
+            // For pointer typedefs, expand via ty->base to avoid looking up ty itself
+            // in type_names, which would produce "pub type Foo = Foo".
+            if ty.kind == chibicc::TypeKind_TY_PTR {
+                printf(c"pub type %s = *%s;\n", sanitize_ident(name), type_to_saya(ty.base));
+            } else {
+                printf(c"pub type %s = %s;\n", sanitize_ident(name), type_to_saya(ty));
+            }
+        }
+
+        printf(c"\n");
+
+        i = i + 1;
+    }
+}
+
+fn emit_function(prog: *chibicc::Obj) {
+    let func = prog;
+    while func != null {
+        if func.ty.kind != chibicc::TypeKind_TY_FUNC || func.is_definition {
+            func = func.next;
+            continue;
+        }
+
+        printf(c"@symbol(\"%s\") pub extern fn %s(", func.name, sanitize_ident(func.name));
+        let param = func.ty.params;
+        while param != null {
+            if param.name == null {
+                fprintf(
+                    stderr,
+                    c"%s:%d: warning: anonymous parameter in %s, using '_' as name\n",
+                    func.ty.name.filename,
+                    func.ty.name.line_no,
+                    func.name
+                );
+                printf(c"_: %s", type_to_saya(param));
+            } else {
+                let pname = sanitize_ident(chibicc::format(c"%.*s", param.name.len, param.name.loc));
+                printf(c"%s: %s", pname, type_to_saya(param));
+            }
+            if param.next != null {
+                printf(c", ");
+            }
+            param = param.next;
+        }
+        printf(c")");
+
+        let return_ty = func.ty.return_ty;
+        if return_ty.kind != chibicc::TypeKind_TY_VOID {
+            printf(c" -> %s", type_to_saya(return_ty));
+        }
+
+        printf(c";\n");
+
+        func = func.next;
+    }
+}
+
+pub fn main(_: i32, argv: [*i8]) -> i32 {
+    chibicc::init_macros();
+    add_default_include_paths(argv[0]);
+
+    let tok = chibicc::tokenize_file(c"-"); // stdin
+    tok = chibicc::preprocess(tok);
+
+    let prog = chibicc::parse(tok);
+
+    build_type_names();
+
+    emit_typedef();
+    emit_function(prog);
+
+    0
+}
