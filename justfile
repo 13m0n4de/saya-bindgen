@@ -13,9 +13,7 @@ _build_objs:
     done
 
 libchibicc: _build_objs
-    #!/usr/bin/env sh
-    objs=$(ls build/chibicc/*.o)
-    ar rcs build/libchibicc.a $objs
+    ar rcs build/libchibicc.a build/chibicc/*.o
 
 build: libchibicc
     mkdir -p build/
