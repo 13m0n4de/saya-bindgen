@@ -226,7 +226,8 @@ pub struct Token {
     next: *Token,
     val: i64,
     // fval: f64,
-    _fval: [u8; 24], // padding(8 byte) + long double(16 byte)
+    _pad: [u8; 8], // padding(8 byte)
+    fval: [u8; 16], // long double(16 byte)
     loc: *i8,
     len: i32,
     ty: *Type,
