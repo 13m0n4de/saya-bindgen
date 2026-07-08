@@ -1,8 +1,6 @@
 #include "chibicc/chibicc.h"
 
 StringArray include_paths;
-bool opt_fcommon = true;
-bool opt_fpic = false;
 
 char *base_file = NULL;
 
