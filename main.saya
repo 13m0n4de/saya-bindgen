@@ -173,7 +173,12 @@ fn type_to_saya(ty: *chibicc::Type) -> *i8 {
             }
             p = p.next;
         }
-        chibicc::format(c"fn(%s) -> %s", params, type_to_saya(ty.return_ty))
+
+        if ty.return_ty.kind == chibicc::TypeKind_TY_VOID {
+            chibicc::format(c"fn(%s)", params)
+        } else {
+            chibicc::format(c"fn(%s) -> %s", params, type_to_saya(ty.return_ty))
+        }
     } else if ty.kind == chibicc::TypeKind_TY_ENUM
            || ty.kind == chibicc::TypeKind_TY_STRUCT
            || ty.kind == chibicc::TypeKind_TY_UNION {

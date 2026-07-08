@@ -113,7 +113,12 @@ char *type_to_saya(Type *ty) {
         params = format("%s, %s", params, type_to_saya(p));
       }
     }
-    return format("fn(%s) -> %s", params, type_to_saya(ty->return_ty));
+
+    if (ty->return_ty->kind == TY_VOID) {
+      return format("fn(%s)", params);
+    } else {
+      return format("fn(%s) -> %s", params, type_to_saya(ty->return_ty));
+    }
   }
   case TY_ENUM:
   case TY_STRUCT:
